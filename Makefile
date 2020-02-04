@@ -6,5 +6,5 @@ compile:
 
 link: compile
 	mkdir -p ODP
-	ln -s massivereader/massivereader ODP/massivereader
-	ln -s multiwriter/multiwriter ODP/multiwriter
+	ln -s ../massivereader/massivereader ODP/massivereader
+	ln -s ../multiwriter/multiwriter ODP/multiwriter

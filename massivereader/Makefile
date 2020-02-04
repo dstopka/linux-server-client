@@ -1,4 +1,9 @@
 CC=gcc
-CFLAGS=-Wall -Werror.
-massivereader: massivereader.c
-	$(CC) -o massivereader massivereader.c
+CFLAGS=-Wall -Werror -I.
+DEPS = Massivereader.h
+
+%.o: %.c $(DEPS)
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+massivereader: main.o Massivereader.o
+	$(CC) -o massivereader main.o Massivereader.o
