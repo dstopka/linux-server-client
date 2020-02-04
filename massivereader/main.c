@@ -15,35 +15,32 @@ int main(int argc, char** argv)
 {
     struct Arguments args;
     int epfd;
-    int sockfd;
-    //struct epoll_event ev;
+    int serverfd;
     struct epoll_event evlist[MAX_EVENTS];
 
     getArguments(&args, argc, argv);
-        
+
+    serverfd = createServer(args.port); 
     if((epfd = epoll_create1(0)) < 0)
         onError("epoll");
-
-    sockfd = createSocket(args.port);
-
-    epollPush(epfd, sockfd, EPOLLIN | EPOLLET);
-    if ((listen(sockfd, 5)) < 0) 
+    epollPush(epfd, serverfd, EPOLLIN | EPOLLET);
+    if ((listen(serverfd, 5)) < 0) 
         onError("listen");
 
     while(1) {
-		int n, i;
-		n = epoll_wait(epfd, evlist, MAX_EVENTS, -1);
-		for (i = 0; i < n; i++) {
+		int readyEventsNumber;
+		readyEventsNumber = epoll_wait(epfd, evlist, MAX_EVENTS, -1);
+		for (int i = 0; i < readyEventsNumber; ++i) {
 			if (evlist[i].events & EPOLLERR || evlist[i].events & EPOLLHUP || !(evlist[i].events & EPOLLIN))
             {
 				/* An error on this fd or socket not ready */
 				perror("epoll error");
 				close(evlist[i].data.fd);
 			} 
-            else if (evlist[i].data.fd == sockfd) 
+            else if (evlist[i].data.fd == serverfd) 
             {
 				/* New incoming connection */
-				acceptAddConnection(sockfd, epfd);
+				acceptAddConnection(serverfd, epfd);
 			} 
             else 
             {
@@ -54,6 +51,7 @@ int main(int argc, char** argv)
 	}
 
     free(args.filePrefix);
-    close(sockfd);
+    close(serverfd);
+    close(epfd);
     _exit(EXIT_SUCCESS);
 }

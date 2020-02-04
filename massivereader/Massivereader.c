@@ -63,7 +63,7 @@ void getArguments(struct Arguments* args, int argc, char** argv)
 
 //---------------------------------------
 
-int createSocket( int port)
+int createServer(int port)
 {
     struct sockaddr_in servaddr;
     int sockfd;
@@ -71,7 +71,7 @@ int createSocket( int port)
     if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
         onError("socket");
 
-    memset(&servaddr,'\0', sizeof(servaddr));
+    memset(&servaddr, 0, sizeof(struct sockaddr_in));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     servaddr.sin_port=htons(port);
@@ -97,18 +97,17 @@ void epollPush(int epollfd, int socketfd, int flags)
 
 //---------------------------------------
 
-void acceptAddConnection(int socket_fd, int epoll_fd)
+void acceptAddConnection(int sockfd, int epfd)
 {
-	struct sockaddr in_addr;
-	socklen_t in_len = sizeof(in_addr);
+	struct sockaddr newAddr;
+	socklen_t newAddrlen = sizeof(newAddr);
 	int infd;
-
-	if((infd = accept(socket_fd, &in_addr, &in_len)) < 0)
+	if((infd = accept(sockfd, &newAddr, &newAddrlen)) < 0)
         onError("accept");
 
     makeNonBlock(infd);
 
-	epollPush(epoll_fd, infd, EPOLLIN | EPOLLET);    
+	epollPush(epfd, infd, EPOLLIN | EPOLLET);    
 }
 
 //---------------------------------------
@@ -117,9 +116,7 @@ void onIncomingData(int fd)
 {
 	ssize_t count;
 	char buf[512];
-
 	count = read(fd, buf, sizeof(buf) - 1);
-
 	buf[count] = '\0';
 	printf("%s \n", buf);
 }

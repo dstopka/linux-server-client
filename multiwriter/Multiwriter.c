@@ -1,18 +1,34 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/epoll.h>
+#include <sys/un.h>
 #include "Multiwriter.h"
+
+void onError(char* message)
+{
+    printf("%s error %d\n", message, errno);
+    _exit(EXIT_FAILURE);
+}
+
+//---------------------------------------
 
 void getArguments(struct Arguments* args, int* argc, char** argv[])
 {
-    int readArgs = 0;
+    //int readArgs = 0;
     int opt;
 	while((opt = getopt(*argc, *argv, "S:p:d:T:")) != -1)
 	{
         char* p;
 		switch(opt)
-		{
-			
+		{			
             case 'S':
                 args->connectionsNumber = strtol(optarg, &p, 10);    
                 if(*p != '\0')
@@ -54,14 +70,74 @@ void getArguments(struct Arguments* args, int* argc, char** argv[])
 				_exit(EXIT_FAILURE);
 		}
 	}
-    if(readArgs < 4)
-    {
-        printf("To few arguments!\n");
-        _exit(EXIT_FAILURE);
-    }
+    // if(readArgs < 4)
+    // {
+    //     printf("To few arguments!\n");
+    //     _exit(EXIT_FAILURE);
+    // }
     if(optind+1 < *argc)
     {
         printf("Unrecognised arguments were specified!\n");
         _exit(EXIT_FAILURE);
     }
+}
+
+//---------------------------------------
+
+int createServer(struct sockaddr_un* addr)
+{
+    int sockfd;
+
+    if((sockfd = socket(AF_LOCAL, SOCK_STREAM, 0)) < 0)
+        onError("socket");    
+ 
+    if(bind(sockfd, (struct sockaddr*)addr, sizeof(struct sockaddr_un))<0)
+        onError("bind");
+
+    //makeNonBlock(sockfd);
+
+    return sockfd;
+}
+
+//---------------------------------------
+
+struct sockaddr_un randomAddr()
+{
+    struct sockaddr_un servaddr;
+    int fd;
+    int readBytes;
+    int size = sizeof(((struct sockaddr_un*)0)->sun_path)-2;
+    char* buff = (char*)malloc(size);
+
+    if((fd = open("/dev/urandom", O_RDONLY, 0)) < 0)
+	    onError("open");
+    if((readBytes=read(fd, buff, size) < 0))
+        onError("read");
+
+    memset(&servaddr, 0, sizeof(struct sockaddr_un));
+    servaddr.sun_family = AF_LOCAL;
+    strncpy(&servaddr.sun_path[1], buff, size);
+
+    return servaddr;
+}
+
+//---------------------------------------
+
+int createClient(int port)
+{
+    struct sockaddr_in servaddr;
+    int sockfd;
+
+    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        onError("socket");
+
+    memset(&servaddr, 0, sizeof(struct sockaddr_in));
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    servaddr.sin_port=htons(port);
+
+    if (connect(sockfd, (struct sockaddr*)&servaddr, sizeof(struct sockaddr_in)) < 0)
+        onError("connect");
+
+    return sockfd;
 }

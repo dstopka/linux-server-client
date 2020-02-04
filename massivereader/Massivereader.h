@@ -10,7 +10,7 @@ struct Arguments
 };
 
 void getArguments(struct Arguments* args, int argc, char** argv);
-int createSocket(int port);
+int createServer(int port);
 void epollPush(int epollfd, int socketfd, int flags);
 void acceptAddConnection(int socket_fd, int epoll_fd);
 void onIncomingData(int fd);
