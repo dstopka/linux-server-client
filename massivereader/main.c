@@ -15,24 +15,29 @@ int main(int argc, char** argv)
 {
     struct Arguments args;
     int epfd;
-    int sockfd;//, len, n;
-
+    int sockfd;
     //struct epoll_event ev;
     //struct epoll_event evlist[MAX_EVENTS];
+
     getArguments(&args, argc, argv);
-    createSocket(&sockfd, args.port);
-    if ((listen(sockfd, 5)) < 0) 
-    { 
-       printf("listen error\t%d\n", errno);
-        _exit(EXIT_FAILURE);
-    }
+        
     if((epfd = epoll_create1(0)) < 0)
     {
         printf("epoll error\n");
         _exit(EXIT_FAILURE);
     } 
 
+    createSocket(&sockfd, args.port);
+    epollPush(epfd, sockfd, EPOLLIN | EPOLLET);
+    if ((listen(sockfd, 5)) < 0) 
+    { 
+       printf("listen error\n");
+        _exit(EXIT_FAILURE);
+    }
+
     while(1){}
 
+    free(args.filePrefix);
+    close(sockfd);
     _exit(EXIT_SUCCESS);
 }

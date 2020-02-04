@@ -11,5 +11,6 @@ struct Arguments
 
 void getArguments(struct Arguments* args, int argc, char** argv);
 void createSocket(int* sockfd, int port);
+void epollPush(int epollfd, int socketfd, int flags);
 
 #endif

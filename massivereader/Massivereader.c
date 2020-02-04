@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <sys/epoll.h>
 #include "Massivereader.h"
 
 void getArguments(struct Arguments* args, int argc, char** argv)
@@ -57,13 +58,14 @@ void getArguments(struct Arguments* args, int argc, char** argv)
 void createSocket(int* sockfd, int port)
 {
     struct sockaddr_in servaddr;
+    int flags;
 
     if((*sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
         printf("socket error\n");
         _exit(EXIT_FAILURE);
     }
-    printf("%d", port);
+
     memset(&servaddr,'\0', sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
@@ -74,4 +76,28 @@ void createSocket(int* sockfd, int port)
         printf("listen error\t%d\n", errno);
         _exit(EXIT_FAILURE);
     }
+
+    if ((flags = fcntl(*sockfd, F_GETFL, 0)) < 0)
+    {
+        printf("fcntl getfl error\n");
+        _exit(EXIT_FAILURE);
+    }
+
+    if (fcntl(*sockfd, F_SETFL, flags | O_NONBLOCK) < 0)
+    {
+        printf("fcntl setfl error\n");
+        _exit(EXIT_FAILURE);
+    }
+}
+
+void epollPush(int epollfd, int socketfd, int flags)
+{
+    struct epoll_event event;
+    event.data.fd = socketfd;
+	event.events = EPOLLIN | EPOLLET;
+	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &event) < 0)
+    {
+		printf("epoll_ctl error\n");
+        _exit(EXIT_FAILURE);
+	}
 }
