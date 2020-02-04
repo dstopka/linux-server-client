@@ -11,6 +11,15 @@
 #include <sys/epoll.h>
 #include "Massivereader.h"
 
+
+void onError(char* message)
+{
+    printf("%s error\n", message);
+    _exit(EXIT_FAILURE);
+}
+
+//---------------------------------------
+
 void getArguments(struct Arguments* args, int argc, char** argv)
 {
     int readArgs = 0;
@@ -23,10 +32,7 @@ void getArguments(struct Arguments* args, int argc, char** argv)
             {
                 args->filePrefix = (char*)malloc(strlen(optarg)+1);
                 if(args->filePrefix == NULL)
-                {
-                    printf("Memory allocation failed!\n");
-                    _exit(EXIT_FAILURE);
-                }
+                    onError("Memory allocation");
                 strcpy(args->filePrefix, optarg);
                 readArgs++;
                 break;
@@ -55,49 +61,77 @@ void getArguments(struct Arguments* args, int argc, char** argv)
     }
 }
 
-void createSocket(int* sockfd, int port)
+//---------------------------------------
+
+int createSocket( int port)
 {
     struct sockaddr_in servaddr;
-    int flags;
+    int sockfd;
 
-    if((*sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-    {
-        printf("socket error\n");
-        _exit(EXIT_FAILURE);
-    }
+    if((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+        onError("socket");
 
     memset(&servaddr,'\0', sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     servaddr.sin_port=htons(port);
  
-    if(bind(*sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr))<0)
-    {
-        printf("listen error\t%d\n", errno);
-        _exit(EXIT_FAILURE);
-    }
+    if(bind(sockfd, (struct sockaddr*)&servaddr, sizeof(servaddr))<0)
+        onError("bind");
 
-    if ((flags = fcntl(*sockfd, F_GETFL, 0)) < 0)
-    {
-        printf("fcntl getfl error\n");
-        _exit(EXIT_FAILURE);
-    }
+    makeNonBlock(sockfd);
 
-    if (fcntl(*sockfd, F_SETFL, flags | O_NONBLOCK) < 0)
-    {
-        printf("fcntl setfl error\n");
-        _exit(EXIT_FAILURE);
-    }
+    return sockfd;
 }
+
+//---------------------------------------
 
 void epollPush(int epollfd, int socketfd, int flags)
 {
     struct epoll_event event;
     event.data.fd = socketfd;
-	event.events = EPOLLIN | EPOLLET;
+	event.events = flags;
 	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &event) < 0)
-    {
-		printf("epoll_ctl error\n");
-        _exit(EXIT_FAILURE);
-	}
+        onError("epoll_ctl");
+}
+
+//---------------------------------------
+
+void acceptAddConnection(int socket_fd, int epoll_fd)
+{
+	struct sockaddr in_addr;
+	socklen_t in_len = sizeof(in_addr);
+	int infd;
+
+	if((infd = accept(socket_fd, &in_addr, &in_len)) < 0)
+        onError("accept");
+
+    makeNonBlock(infd);
+
+	epollPush(epoll_fd, infd, EPOLLIN | EPOLLET);    
+}
+
+//---------------------------------------
+
+void onIncomingData(int fd)
+{
+	ssize_t count;
+	char buf[512];
+
+	count = read(fd, buf, sizeof(buf) - 1);
+
+	buf[count] = '\0';
+	printf("%s \n", buf);
+}
+
+//---------------------------------------
+
+void makeNonBlock(int sockfd)
+{
+    int flags;
+    if ((flags = fcntl(sockfd, F_GETFL, 0)) < 0)
+        onError("fcntl getfl");
+
+    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) < 0)
+        onError("fcntl setfl");
 }
