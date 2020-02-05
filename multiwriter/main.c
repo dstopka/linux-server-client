@@ -19,6 +19,7 @@ int main(int argc, char** argv)
 {
     struct sockaddr_un servaddr;
     struct timespec serviceTime;
+    struct timespec sleepTime;
     memset(&serviceTime, 0, sizeof(struct timespec));
     struct itimerspec ts;
     struct epoll_event evlist[MAX_EVENTS];
@@ -80,10 +81,13 @@ int main(int argc, char** argv)
     if(timer_settime(timerid, 0, &ts, NULL))
         onError("timer set_time");
 
+    sleepTime.tv_sec=(int)(args.interspace*1000) / 1000000000;
+    sleepTime.tv_nsec=(int)(args.interspace*1000) % 1000000000;
+
     while(running)
     {
-        sendData();
-        sleep();
+        sendData(args.connectionsNumber, &connections, servaddr, &serviceTime);
+        nanosleep(&sleepTime, NULL);
     }
 
     free(connections.connectedSockets);
@@ -91,6 +95,7 @@ int main(int argc, char** argv)
         onError("close");
     if(close(epfd) < 0)
         onError("close");
+    printf("service time: %lds & %ldns", serviceTime.tv_sec, serviceTime.tv_nsec);
     _exit(EXIT_SUCCESS);
 }
 

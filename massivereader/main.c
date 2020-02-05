@@ -24,7 +24,7 @@ int main(int argc, char** argv)
     serverfd = createServer(args.port); 
     if((epfd = epoll_create1(0)) < 0)
         onError("epoll");
-    epollPush(epfd, serverfd, EPOLLIN | EPOLLET);
+    epollPush(epfd, serverfd, EPOLLIN | EPOLLET, 0, 0);
 
     while(1) 
     {

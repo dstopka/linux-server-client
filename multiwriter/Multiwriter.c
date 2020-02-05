@@ -28,7 +28,7 @@ void onError(char* message)
 
 void getArguments(struct Arguments* args, int argc, char* argv[])
 {
-    //int readArgs = 0;
+    int readArgs = 0;
     int opt;
 	while((opt = getopt(argc, argv, "S:p:d:T:")) != -1)
 	{
@@ -76,11 +76,11 @@ void getArguments(struct Arguments* args, int argc, char* argv[])
 				_exit(EXIT_FAILURE);
 		}
 	}
-    // if(readArgs < 4)
-    // {
-    //     printf("To few arguments!\n");
-    //     _exit(EXIT_FAILURE);
-    // }
+    if(readArgs < 4)
+    {
+        printf("To few arguments!\n");
+        _exit(EXIT_FAILURE);
+    }
     if(optind+1 < argc)
     {
         printf("Unrecognised arguments were specified!\n");

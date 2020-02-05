@@ -12,6 +12,13 @@ struct Arguments
     int filesNo;
 };
 
+struct SocketData 
+{
+    int fd;
+    int local;
+    struct sockaddr_un addr;
+};
+
 void getArguments(struct Arguments* args, int argc, char** argv);
 int createServer(int port);
 void epollPush(int epollfd, int socketfd, int flags);
