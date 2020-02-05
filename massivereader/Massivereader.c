@@ -10,8 +10,12 @@
 #include <errno.h>
 #include <sys/epoll.h>
 #include <sys/un.h>
+#include <signal.h>
+#include <sys/time.h>
+#include <time.h>
 #include "Massivereader.h"
 
+int flag = 0;
 
 void onError(char* message)
 {
@@ -173,7 +177,75 @@ int connectSocket(struct sockaddr_un addr)
 
 //---------------------------------------
 
-void makeLog(struct Arguments args)
+void makeLog(struct Arguments* args, int* logfd)
 {
+    int fd = -1;
+    char new_file_path[1024];
     
+    while(fd == -1)
+    {
+        sprintf(new_file_path,"%s%03d", args->filePrefix, args->filesNo++);
+        fd = open(new_file_path, O_WRONLY | O_CREAT | O_TRUNC);
+    }
+
+    if(close(*logfd) < 0)
+        onError("close");
+    *logfd = fd;
+    flag = 0;
+}
+
+//---------------------------------------
+
+void sigUsr1Handler()
+{
+    flag = 1;
+}
+
+//---------------------------------------
+
+void setHandler()
+{
+    struct sigaction sa;
+    sa.sa_flags = 0;
+    sa.sa_handler = sigUsr1Handler;
+    if(sigaction(SIGUSR1, &sa, NULL) == -1)
+        onError("sigaction");
+}
+
+//---------------------------------------
+
+char* timeToStr()
+{
+    char* buff=(char*)malloc(20);
+    if(buff == NULL)
+        onError("memory allocation");
+    buff[19] = 0;
+    struct timespec t;
+    struct tm* tm;
+    long nanoseconds;
+
+    if(clock_gettime(CLOCK_REALTIME, &t)<0)
+        onError("gettime");
+    if((tm = localtime(&t.tv_sec)) == NULL)
+        onError("localtime");
+
+    strftime(buff, sizeof buff, "%M*:%S,", tm);
+
+    nanoseconds = t.tv_nsec;
+    char nsec[10];
+    nsec[9] = 0;
+    for (int i = 0; i < 9; ++i) {
+        nsec[8-i] = '0' + (char)(nanoseconds%10);
+        nanoseconds /= 10;
+    }
+
+    strncpy(&buff[7], nsec, 2);
+    strcat(buff, ".");
+    strncpy(&buff[10], &nsec[2], 2);
+    strcat(buff, ".");
+    strncpy(&buff[13], &nsec[4], 2);
+    strcat(buff, ".");
+    strncpy(&buff[16], &nsec[6], 3);
+
+    return buff;    
 }

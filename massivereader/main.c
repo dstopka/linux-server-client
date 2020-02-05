@@ -16,10 +16,11 @@ int main(int argc, char** argv)
     struct Arguments args = {0, "", 0};
     int epfd;
     int serverfd;
+    int logfd;
     struct epoll_event evlist[MAX_EVENTS];
 
     getArguments(&args, argc, argv);
-
+    makeLog(&args, &logfd);
     serverfd = createServer(args.port); 
     if((epfd = epoll_create1(0)) < 0)
         onError("epoll");
@@ -52,6 +53,8 @@ int main(int argc, char** argv)
     if(close(serverfd) < 0)
         onError("close");
     if(close(epfd) < 0)
+        onError("close");
+    if(close(logfd) < 0)
         onError("close");
     _exit(EXIT_SUCCESS);
 }

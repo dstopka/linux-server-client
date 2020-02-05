@@ -4,6 +4,7 @@
 #include <sys/un.h>
 #define MAX_EVENTS 256
 
+extern int flag;
 struct Arguments
 {
     int port;
@@ -19,6 +20,8 @@ void onIncomingData(int fd, int epollfd);
 void makeNonBlock(int sockfd);
 void onError(char* message);
 int connectSocket(struct sockaddr_un addr);
-void makeLog(struct Arguments args);
+void makeLog(struct Arguments* args, int* logfd);
+void sigUsr1Handler();
+char* timeToStr();
 
 #endif
