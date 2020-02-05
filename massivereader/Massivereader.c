@@ -133,14 +133,12 @@ void onIncomingData(int fd, int epollfd)
             epollPush(epollfd, newSockfd, EPOLLIN | EPOLLET);
             if(write(fd, &addr, sizeof(struct sockaddr_un)) < 0)
                 onError("write +");
-            printf("connected to local server\n");
         }
         else 
         {
             addr.sun_family = -1;
             if(write(fd, &addr, sizeof(struct sockaddr_un)) < 0)
                 onError("write +");
-            printf("couldn't connect to local server \n%s\n", addr.sun_path + 1);
         }
     }
 }

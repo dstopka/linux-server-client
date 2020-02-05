@@ -128,6 +128,8 @@ struct sockaddr_un randomAddr()
     strncpy(&servaddr.sun_path[1], buff, size);
 
     free(buff);
+    if(close(fd) < 0)
+        onError("close");
     return servaddr;
 }
 
@@ -290,4 +292,38 @@ struct itimerspec setTime(float time)
     ts.it_interval.tv_sec = 0;
 
     return ts;
+}
+
+//---------------------------------------
+
+void sumServiceTime(struct timespec start, struct timespec end, struct timespec* sum)
+{
+    sum->tv_sec += end.tv_sec - start.tv_sec + ((sum->tv_nsec + end.tv_nsec - start.tv_nsec)/1000000000);
+    sum->tv_nsec = (sum->tv_nsec+end.tv_nsec - start.tv_nsec)%1000000000;
+}
+
+//---------------------------------------
+
+void sendData(int max, struct Connections* connected, struct sockaddr_un addr, struct timespec* serviceTime)
+{
+    struct timespec startTime;
+    struct timespec endTime;
+    char* strStartTime;
+    int randIdx;
+
+    srand(time(NULL));
+    if(clock_gettime(CLOCK_REALTIME,&startTime))
+        onError("clock_gettime");
+    strStartTime = timeToStr();
+    randIdx = rand()%max;
+    while(connected->connectedSockets[randIdx] == 0)
+        randIdx = rand()%max;
+
+    write(connected->connectedSockets[randIdx], strStartTime, 20);
+    write(connected->connectedSockets[randIdx], &addr, sizeof(struct sockaddr_un));
+    write(connected->connectedSockets[randIdx], &startTime, sizeof(startTime));    
+
+    if(clock_gettime(CLOCK_REALTIME,&endTime))
+        onError("clock_gettime");
+    sumServiceTime(startTime, endTime, serviceTime);
 }

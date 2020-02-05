@@ -38,5 +38,7 @@ timer_t createTimer();
 void setHandler();
 void sigUsr1Handler();
 struct itimerspec setTime(float time);
+void sumServiceTime(struct timespec start, struct timespec end, struct timespec* sum);
+void sendData(int max, struct Connections* connected, struct sockaddr_un addr, struct timespec* serviceTime);
 
 #endif

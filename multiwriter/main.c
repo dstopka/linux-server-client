@@ -1,3 +1,4 @@
+#include <bits/types/struct_timespec.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -17,6 +18,8 @@
 int main(int argc, char** argv)
 {
     struct sockaddr_un servaddr;
+    struct timespec serviceTime;
+    memset(&serviceTime, 0, sizeof(struct timespec));
     struct itimerspec ts;
     struct epoll_event evlist[MAX_EVENTS];
     struct Connections connections = {NULL, 0, 0};
@@ -79,7 +82,8 @@ int main(int argc, char** argv)
 
     while(running)
     {
-
+        sendData();
+        sleep();
     }
 
     free(connections.connectedSockets);
