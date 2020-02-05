@@ -185,7 +185,7 @@ void makeLog(struct Arguments* args, int* logfd)
     while(fd == -1)
     {
         sprintf(new_file_path,"%s%03d", args->filePrefix, args->filesNo++);
-        fd = open(new_file_path, O_WRONLY | O_CREAT | O_TRUNC);
+        fd = open(new_file_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     }
 
     if(close(*logfd) < 0)

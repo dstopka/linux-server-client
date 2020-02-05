@@ -1,7 +1,12 @@
 #ifndef _MULTIREADER_H_
 #define _MULTIREADER_H_
 
+#include <bits/types/struct_itimerspec.h>
+#include <time.h>
+
 #define MAX_EVENTS 256
+
+extern int running;
 
 struct Arguments
 {
@@ -29,6 +34,9 @@ void epollPush(int epollfd, int socketfd, int flags);
 void makeNonBlock(int sockfd);
 void acceptConnection(int serverfd, int** socketsList, int epfd);
 void onIncomingData(int inetfd, struct Connections* connections);
-//char* my_itoa(int x);
+timer_t createTimer();
+void setHandler();
+void sigUsr1Handler();
+struct itimerspec setTime(float time);
 
 #endif

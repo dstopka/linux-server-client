@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <sys/un.h>
 #include <fcntl.h>
+#include <time.h>
 #include <string.h>
 #include <errno.h>
 #include "Multiwriter.h"
@@ -16,9 +17,11 @@
 int main(int argc, char** argv)
 {
     struct sockaddr_un servaddr;
+    struct itimerspec ts;
     struct epoll_event evlist[MAX_EVENTS];
     struct Connections connections = {NULL, 0, 0};
     struct Arguments args;
+    timer_t timerid;
     int serverfd;
     int inetfd;
     int epfd;
@@ -28,6 +31,9 @@ int main(int argc, char** argv)
     if(connections.connectedSockets == NULL)
         onError("memory allocation");
     int* nextSocket = connections.connectedSockets;
+    timerid = createTimer();
+    ts = setTime(args.runtime);
+    setHandler();
     servaddr = randomAddr();
     serverfd = createServer(&servaddr);
     inetfd = createClient(args.port);
@@ -68,6 +74,14 @@ int main(int argc, char** argv)
     close(inetfd);
     printf("%s\n", timeToStr());
 
+    if(timer_settime(timerid, 0, &ts, NULL))
+        onError("timer set_time");
+
+    while(running)
+    {
+
+    }
+    printf("JANUSz");
     free(connections.connectedSockets);
     if(close(serverfd) < 0)
         onError("close");

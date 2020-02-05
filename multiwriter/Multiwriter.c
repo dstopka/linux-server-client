@@ -12,8 +12,11 @@
 #include <sys/un.h>
 #include <sys/time.h>
 #include <time.h>
+#include <signal.h>
 #include <limits.h>
 #include "Multiwriter.h"
+
+int running = 1;
 
 void onError(char* message)
 {
@@ -51,19 +54,19 @@ void getArguments(struct Arguments* args, int argc, char* argv[])
                 break;
 
             case 'd':
-                args->port = strtof(optarg, &p);    
+                args->interspace = strtof(optarg, &p);    
                 if(*p != '\0')
                 {
-                    printf("Interspace argument must be an integer!\n");
+                    printf("Interspace argument must be a float!\n");
                     _exit(EXIT_FAILURE);
                 }
                 break;
 
             case 'T':
-                args->port = strtof(optarg, &p);    
+                args->runtime = strtof(optarg, &p);    
                 if(*p != '\0')
                 {
-                    printf("Runtime argument must be an integer!\n");
+                    printf("Runtime argument must be a float!\n");
                     _exit(EXIT_FAILURE);
                 }
                 break;
@@ -237,4 +240,54 @@ void onIncomingData(int inetfd, struct Connections* connections)
         else
             connections->rejectedNo++;
     }
+}
+
+//---------------------------------------
+
+timer_t createTimer()
+{
+    timer_t id;
+    struct sigevent sev;
+    sev.sigev_notify = SIGEV_SIGNAL;
+	sev.sigev_signo = SIGUSR1;
+
+	if(timer_create(CLOCK_REALTIME, &sev, &id) < 0)
+	{
+		perror("timer_create");
+		_exit(EXIT_FAILURE);
+	}
+    return id;
+}
+
+//---------------------------------------
+
+void setHandler()
+{
+    struct sigaction sa;
+    sa.sa_flags = 0;
+    sa.sa_handler = sigUsr1Handler;
+    if(sigaction(SIGUSR1, &sa, NULL) == -1)
+        onError("sigaction");
+}
+
+//---------------------------------------
+
+void sigUsr1Handler()
+{
+    running = 0;
+}
+
+//---------------------------------------
+
+struct itimerspec setTime(float time)
+{
+    double t = time;
+    struct itimerspec ts;
+    t = time * 10000000;
+    ts.it_value.tv_sec = (int)(t / 1000000000);
+    ts.it_value.tv_nsec = (int)time % 1000000000;
+    ts.it_interval.tv_nsec = 0;
+    ts.it_interval.tv_sec = 0;
+
+    return ts;
 }
