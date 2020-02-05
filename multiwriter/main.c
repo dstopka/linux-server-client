@@ -21,8 +21,11 @@ int main(int argc, char** argv)
     int serverfd;
     int inetfd;
     int epfd;
+    int* connectedSockets;
 
     getArguments(&args, &argc, &argv);
+    connectedSockets = (int*)malloc(args.connectionsNumber*sizeof(int));
+    int* nextSocket = connectedSockets;
     servaddr = randomAddr();
     serverfd = createServer(&servaddr);
     inetfd = createClient(args.port);
@@ -41,19 +44,16 @@ int main(int argc, char** argv)
 		for (int i = 0; i < readyEventsNumber; ++i) {
 			if (evlist[i].events & EPOLLERR || evlist[i].events & EPOLLHUP || !(evlist[i].events & EPOLLIN))
             {
-				/* An error on this fd or socket not ready */
 				perror("epoll error");
 				close(evlist[i].data.fd);
 			} 
             else if (evlist[i].data.fd == serverfd) 
             {
-				/* New incoming connection */
-				acceptAddConnection(serverfd, epfd);
+				acceptConnection(serverfd, nextSocket);
 			} 
             else if (evlist[i].data.fd == inetfd)
             {
-				/* Data incoming on fd */
-				onIncomingData(evlist[i].data.fd, epfd);
+				onIncomingData(inetfd);
 			}
 		}
 	}

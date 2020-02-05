@@ -32,18 +32,15 @@ int main(int argc, char** argv)
 		for (int i = 0; i < readyEventsNumber; ++i) {
 			if (evlist[i].events & EPOLLERR || evlist[i].events & EPOLLHUP || !(evlist[i].events & EPOLLIN))
             {
-				/* An error on this fd or socket not ready */
 				perror("epoll error");
 				close(evlist[i].data.fd);
 			} 
             else if (evlist[i].data.fd == serverfd) 
             {
-				/* New incoming connection */
 				acceptAddConnection(serverfd, epfd);
 			} 
             else 
             {
-				/* Data incoming on fd */
 				onIncomingData(evlist[i].data.fd, epfd);
 			}
 		}

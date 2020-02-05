@@ -20,6 +20,8 @@ struct sockaddr_un randomAddr();
 void timeToStr();
 void epollPush(int epollfd, int socketfd, int flags);
 void makeNonBlock(int sockfd);
+void acceptConnection(int serverfd, int* socketsList);
+void onIncomingData(int inetfd);
 //char* my_itoa(int x);
 
 #endif

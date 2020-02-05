@@ -194,3 +194,24 @@ void makeNonBlock(int sockfd)
     if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) < 0)
         onError("fcntl setfl");
 }
+
+//---------------------------------------
+
+void acceptConnection(int serverfd, int* socketsList)
+{
+    int sockfd;
+    if((sockfd = accept(serverfd, NULL, NULL)))
+        onError("accept");
+    *(socketsList++) = sockfd;
+}
+
+//---------------------------------------
+
+void onIncomingData(int inetfd)
+{
+     while(1) {
+        struct sockaddr_un addr;
+        if (read(inetfd, &addr, sizeof(struct sockaddr_un)) != sizeof(struct sockaddr_un))
+            break;
+        }
+}
