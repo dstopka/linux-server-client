@@ -98,6 +98,9 @@ int createServer(struct sockaddr_un* addr)
 
     //makeNonBlock(sockfd);
 
+    if ((listen(sockfd, 5)) < 0) 
+        onError("listen");
+
     return sockfd;
 }
 

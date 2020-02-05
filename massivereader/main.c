@@ -45,7 +45,7 @@ int main(int argc, char** argv)
             else 
             {
 				/* Data incoming on fd */
-				onIncomingData(evlist[i].data.fd);
+				onIncomingData(evlist[i].data.fd, epfd);
 			}
 		}
 	}

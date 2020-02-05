@@ -113,20 +113,27 @@ void acceptAddConnection(int sockfd, int epfd)
 
 //---------------------------------------
 
-void onIncomingData(int fd)
+void onIncomingData(int fd, int epollfd)
 {
-	struct sockaddr_un addr;
-
     while(1)
     {
+        struct sockaddr_un addr;
 	    if(read(fd, &addr, sizeof(struct sockaddr_un)) != sizeof(struct sockaddr_un))
-        {
             break;
+        int newSockfd;
+        if((newSockfd = connectSocket(addr)))
+        {
+            epollPush(epollfd, newSockfd, EPOLLIN | EPOLLET);
+            write(fd, &addr, sizeof(struct sockaddr_un));
+            printf("connected to local server\n");
+        }
+        else 
+        {
+            addr.sun_family = -1;
+            write(fd, &addr, sizeof(struct sockaddr_un));
+            printf("couldn't connect to local server \n%s\n", addr.sun_path + 1);
         }
     }
-
-
-	write(1, addr.sun_path, 108);
 }
 
 //---------------------------------------
@@ -139,4 +146,22 @@ void makeNonBlock(int sockfd)
 
     if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) < 0)
         onError("fcntl setfl");
+}
+
+//---------------------------------------
+
+int connectSocket(struct sockaddr_un addr)
+{
+    int socketfd;
+    if((socketfd = socket(AF_LOCAL, SOCK_STREAM, 0)) < 0)
+        onError("socket");
+
+    if(connect(socketfd, (struct sockaddr *)&addr, sizeof(struct sockaddr_un)) < 0)
+    {
+        printf("%d\n", errno);
+        return 0;
+    }
+
+    makeNonBlock(socketfd);
+    return socketfd;
 }
