@@ -12,6 +12,7 @@
 #include <sys/un.h>
 #include <sys/time.h>
 #include <time.h>
+#include <limits.h>
 #include "Multiwriter.h"
 
 void onError(char* message)
@@ -22,11 +23,11 @@ void onError(char* message)
 
 //---------------------------------------
 
-void getArguments(struct Arguments* args, int* argc, char** argv[])
+void getArguments(struct Arguments* args, int argc, char* argv[])
 {
     //int readArgs = 0;
     int opt;
-	while((opt = getopt(*argc, *argv, "S:p:d:T:")) != -1)
+	while((opt = getopt(argc, argv, "S:p:d:T:")) != -1)
 	{
         char* p;
 		switch(opt)
@@ -77,7 +78,7 @@ void getArguments(struct Arguments* args, int* argc, char** argv[])
     //     printf("To few arguments!\n");
     //     _exit(EXIT_FAILURE);
     // }
-    if(optind+1 < *argc)
+    if(optind+1 < argc)
     {
         printf("Unrecognised arguments were specified!\n");
         _exit(EXIT_FAILURE);
@@ -100,7 +101,6 @@ int createServer(struct sockaddr_un* addr)
 
     if ((listen(sockfd, 5)) < 0) 
         onError("listen");
-
 
     return sockfd;
 }
@@ -142,10 +142,10 @@ int createClient(int port)
     servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     servaddr.sin_port=htons(port);
 
-    makeNonBlock(sockfd);
-
     if (connect(sockfd, (struct sockaddr*)&servaddr, sizeof(struct sockaddr_in)) < 0)
         onError("connect");
+
+    makeNonBlock(sockfd);
 
     return sockfd;
 }
@@ -154,7 +154,7 @@ int createClient(int port)
 
 void timeToStr()
 {
-     char            fmt[64];//, buf[64];
+    char fmt[64];//, buf[64];
     struct timespec t;
     struct tm* tm;
     if(clock_gettime(CLOCK_REALTIME, &t)<0)
@@ -167,7 +167,7 @@ void timeToStr()
 
     //TODO... concat time with nanoseconds
 
-    printf("'%s'\n", fmt); 
+    //printf("'%s'\n", fmt); 
 
     
 }
@@ -180,7 +180,7 @@ void epollPush(int epollfd, int socketfd, int flags)
     event.data.fd = socketfd;
 	event.events = flags;
 	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &event) < 0)
-        onError("epoll_ctl");
+        onError("epoll_ctl add");
 }
 
 //---------------------------------------
@@ -197,21 +197,27 @@ void makeNonBlock(int sockfd)
 
 //---------------------------------------
 
-void acceptConnection(int serverfd, int* socketsList)
+void acceptConnection(int serverfd, int* socketsList, int epfd)
 {
     int sockfd;
-    if((sockfd = accept(serverfd, NULL, NULL)))
+    if((sockfd = accept(serverfd, NULL, NULL)) < 0)
         onError("accept");
     *(socketsList++) = sockfd;
+    epollPush(epfd, sockfd, EPOLLIN | EPOLLET);
 }
 
 //---------------------------------------
 
-void onIncomingData(int inetfd)
+void onIncomingData(int inetfd, struct Connections* connections)
 {
      while(1) {
         struct sockaddr_un addr;
         if (read(inetfd, &addr, sizeof(struct sockaddr_un)) != sizeof(struct sockaddr_un))
             break;
-        }
+        if(addr.sun_family != USHRT_MAX)
+            connections->connectedNo++;
+        else
+            connections->rejectedNo++;
+
+    }
 }

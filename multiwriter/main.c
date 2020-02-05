@@ -17,15 +17,17 @@ int main(int argc, char** argv)
 {
     struct sockaddr_un servaddr;
     struct epoll_event evlist[MAX_EVENTS];
+    struct Connections connections = {NULL, 0, 0};
     struct Arguments args;
     int serverfd;
     int inetfd;
     int epfd;
-    int* connectedSockets;
 
-    getArguments(&args, &argc, &argv);
-    connectedSockets = (int*)malloc(args.connectionsNumber*sizeof(int));
-    int* nextSocket = connectedSockets;
+    getArguments(&args, argc, argv);
+    connections.connectedSockets = (int*)malloc(args.connectionsNumber*sizeof(int));
+    if(connections.connectedSockets == NULL)
+        onError("memory allocation");
+    int* nextSocket = connections.connectedSockets;
     servaddr = randomAddr();
     serverfd = createServer(&servaddr);
     inetfd = createClient(args.port);
@@ -37,23 +39,24 @@ int main(int argc, char** argv)
     for(int i; i < args.connectionsNumber; ++i)
         write(inetfd, &servaddr, sizeof(struct sockaddr_un));
 
-    while(1) 
+    while(connections.connectedNo + connections.rejectedNo < args.connectionsNumber) 
     {
 		int readyEventsNumber;
 		readyEventsNumber = epoll_wait(epfd, evlist, MAX_EVENTS, -1);
 		for (int i = 0; i < readyEventsNumber; ++i) {
 			if (evlist[i].events & EPOLLERR || evlist[i].events & EPOLLHUP || !(evlist[i].events & EPOLLIN))
             {
-				perror("epoll error");
+                if (epoll_ctl(epfd, EPOLL_CTL_DEL, evlist[i].data.fd, NULL) < 0)
+                    onError("epoll_ctl delete");
 				close(evlist[i].data.fd);
 			} 
             else if (evlist[i].data.fd == serverfd) 
             {
-				acceptConnection(serverfd, nextSocket);
+				acceptConnection(serverfd, nextSocket, epfd);
 			} 
             else if (evlist[i].data.fd == inetfd)
             {
-				onIncomingData(inetfd);
+				onIncomingData(inetfd, &connections);
 			}
 		}
 	}
