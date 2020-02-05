@@ -21,7 +21,7 @@ struct SocketData
 
 void getArguments(struct Arguments* args, int argc, char** argv);
 int createServer(int port);
-void epollPush(int epollfd, int socketfd, int flags);
+void epollPush(int epollfd, int socketfd, int flags, int local, struct sockaddr_un addr);
 void acceptAddConnection(int socket_fd, int epoll_fd);
 void onIncomingData(int fd, int epollfd);
 void makeNonBlock(int sockfd);
@@ -30,5 +30,6 @@ int connectSocket(struct sockaddr_un addr);
 void makeLog(struct Arguments* args, int* logfd);
 void sigUsr1Handler();
 char* timeToStr();
+void readLocalData(struct SocketData* socketData, int fileFd);
 
 #endif

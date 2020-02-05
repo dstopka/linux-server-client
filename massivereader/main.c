@@ -24,7 +24,8 @@ int main(int argc, char** argv)
     serverfd = createServer(args.port); 
     if((epfd = epoll_create1(0)) < 0)
         onError("epoll");
-    epollPush(epfd, serverfd, EPOLLIN | EPOLLET, 0, 0);
+    struct sockaddr_un addr;
+    epollPush(epfd, serverfd, EPOLLIN | EPOLLET, 0, addr);
 
     while(1) 
     {
@@ -38,14 +39,18 @@ int main(int argc, char** argv)
 				if(close(evlist[i].data.fd) < 0)
                     onError("close");
 			} 
-            else if (evlist[i].data.fd == serverfd) 
+            else if (((struct SocketData*) (evlist[i].data.ptr))->fd == serverfd) 
             {
 				acceptAddConnection(serverfd, epfd);
 			} 
-            else 
+            else if(((struct SocketData*) (evlist[i].data.ptr))->local)
             {
-				onIncomingData(evlist[i].data.fd, epfd);
+				readLocalData(((struct SocketData*)evlist[i].data.ptr), logfd);
 			}
+            else
+            {
+                onIncomingData(evlist[i].data.fd, epfd);
+            }
 		}
 	}
 

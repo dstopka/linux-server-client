@@ -94,10 +94,14 @@ int createServer(int port)
 
 //---------------------------------------
 
-void epollPush(int epollfd, int socketfd, int flags)
+void epollPush(int epollfd, int socketfd, int flags, int local, struct sockaddr_un addr)
 {
     struct epoll_event event;
-    event.data.fd = socketfd;
+    struct SocketData sockdt;
+    sockdt.fd = socketfd;
+    sockdt.addr = addr;
+    sockdt.local = local;
+    event.data.ptr = &sockdt;
 	event.events = flags;
 	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &event) < 0)
         onError("epoll_ctl");
@@ -114,8 +118,8 @@ void acceptAddConnection(int sockfd, int epfd)
         onError("accept");
 
     makeNonBlock(infd);
-
-	epollPush(epfd, infd, EPOLLIN | EPOLLET);    
+    struct sockaddr_un addr;
+	epollPush(epfd, infd, EPOLLIN | EPOLLET, 0, addr);    
 }
 
 //---------------------------------------
@@ -130,7 +134,7 @@ void onIncomingData(int fd, int epollfd)
         int newSockfd;
         if((newSockfd = connectSocket(addr)))
         {
-            epollPush(epollfd, newSockfd, EPOLLIN | EPOLLET);
+            epollPush(epollfd, newSockfd, EPOLLIN | EPOLLET, 1, addr);
             if(write(fd, &addr, sizeof(struct sockaddr_un)) < 0)
                 onError("write +");
         }
@@ -246,4 +250,39 @@ char* timeToStr()
     strncpy(&buff[16], &nsec[6], 3);
 
     return buff;    
+}
+
+//---------------------------------------
+
+void readLocalData(struct SocketData* socketData, int fileFd)
+{
+    char timestamp[20];
+    char connectionAddr[108];
+    struct timespec readTime;
+    struct timespec currentTime;
+    //struct timespec sub;
+    char* currentTimeStr;
+    currentTimeStr = timeToStr();
+    if(read(socketData->fd, &timestamp, 20) != 20)
+        onError("read");
+    if(read(socketData->fd, &connectionAddr, 108) != 108)
+        onError("read");
+
+    if(!strcmp(connectionAddr, socketData->addr.sun_path))
+        return;
+    if(read(socketData->fd, &readTime, sizeof(struct timespec)) != sizeof(struct timespec))
+        onError("read");
+
+    if(clock_gettime(CLOCK_REALTIME, &currentTime) < 0)
+        onError("clock_gettime");
+
+    //long time = (readTime.tv_sec * 1000000000 + readTime.tv_nsec) - (currentTime.tv_sec * 1000000000 + readTime.tv_sec);
+    //sub.tv_nsec = time % 1000000000;
+    //sub.tv_sec = time / 1000000000;
+    write(fileFd, currentTimeStr, 20);
+    write(fileFd, ":", 1);
+    write(fileFd, timestamp, 20);
+    write(fileFd, ":", 1);    
+    write(fileFd, "\n", 1);
+
 }
