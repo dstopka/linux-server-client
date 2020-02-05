@@ -96,10 +96,11 @@ int createServer(struct sockaddr_un* addr)
     if(bind(sockfd, (struct sockaddr*)addr, sizeof(struct sockaddr_un))<0)
         onError("bind");
 
-    //makeNonBlock(sockfd);
+    makeNonBlock(sockfd);
 
     if ((listen(sockfd, 5)) < 0) 
         onError("listen");
+
 
     return sockfd;
 }
@@ -141,6 +142,8 @@ int createClient(int port)
     servaddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     servaddr.sin_port=htons(port);
 
+    makeNonBlock(sockfd);
+
     if (connect(sockfd, (struct sockaddr*)&servaddr, sizeof(struct sockaddr_in)) < 0)
         onError("connect");
 
@@ -169,16 +172,25 @@ void timeToStr()
     
 }
 
-// char* my_itoa(int x) {
-//   char** buf = malloc(10);
-//   char *p = buf[9];
-//   *p = '\0';
-//   int i = x;
+//---------------------------------------
 
-//   do {
-//     *(--p) = abs(i%10) + '0';
-//     i /= 10;
-//   } while (i);
-//   printf("itoa %s", *buf);
-//   return *buf;
-// }
+void epollPush(int epollfd, int socketfd, int flags)
+{
+    struct epoll_event event;
+    event.data.fd = socketfd;
+	event.events = flags;
+	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &event) < 0)
+        onError("epoll_ctl");
+}
+
+//---------------------------------------
+
+void makeNonBlock(int sockfd)
+{
+    int flags;
+    if ((flags = fcntl(sockfd, F_GETFL, 0)) < 0)
+        onError("fcntl getfl");
+
+    if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) < 0)
+        onError("fcntl setfl");
+}

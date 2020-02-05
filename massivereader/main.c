@@ -24,10 +24,9 @@ int main(int argc, char** argv)
     if((epfd = epoll_create1(0)) < 0)
         onError("epoll");
     epollPush(epfd, serverfd, EPOLLIN | EPOLLET);
-    if ((listen(serverfd, 5)) < 0) 
-        onError("listen");
 
-    while(1) {
+    while(1) 
+    {
 		int readyEventsNumber;
 		readyEventsNumber = epoll_wait(epfd, evlist, MAX_EVENTS, -1);
 		for (int i = 0; i < readyEventsNumber; ++i) {

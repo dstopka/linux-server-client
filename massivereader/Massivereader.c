@@ -82,6 +82,9 @@ int createServer(int port)
 
     makeNonBlock(sockfd);
 
+    if ((listen(sockfd, 5)) < 0) 
+        onError("listen");
+
     return sockfd;
 }
 
