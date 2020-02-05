@@ -13,7 +13,7 @@
 
 int main(int argc, char** argv)
 {
-    struct Arguments args;
+    struct Arguments args = {0, "", 0};
     int epfd;
     int serverfd;
     struct epoll_event evlist[MAX_EVENTS];

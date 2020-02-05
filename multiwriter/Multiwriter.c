@@ -197,12 +197,13 @@ void makeNonBlock(int sockfd)
 
 //---------------------------------------
 
-void acceptConnection(int serverfd, int* socketsList, int epfd)
+void acceptConnection(int serverfd, int** socketsList, int epfd)
 {
     int sockfd;
     if((sockfd = accept(serverfd, NULL, NULL)) < 0)
         onError("accept");
-    *(socketsList++) = sockfd;
+    **socketsList = sockfd;
+    (*socketsList)++;
     epollPush(epfd, sockfd, EPOLLIN | EPOLLET);
 }
 

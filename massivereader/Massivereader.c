@@ -170,3 +170,10 @@ int connectSocket(struct sockaddr_un addr)
     makeNonBlock(socketfd);
     return socketfd;
 }
+
+//---------------------------------------
+
+void makeLog(struct Arguments args)
+{
+    
+}

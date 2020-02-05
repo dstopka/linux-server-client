@@ -8,6 +8,7 @@ struct Arguments
 {
     int port;
     char* filePrefix; 
+    int filesNo;
 };
 
 void getArguments(struct Arguments* args, int argc, char** argv);
@@ -18,6 +19,6 @@ void onIncomingData(int fd, int epollfd);
 void makeNonBlock(int sockfd);
 void onError(char* message);
 int connectSocket(struct sockaddr_un addr);
-
+void makeLog(struct Arguments args);
 
 #endif

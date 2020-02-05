@@ -52,7 +52,7 @@ int main(int argc, char** argv)
 			} 
             else if (evlist[i].data.fd == serverfd) 
             {
-				acceptConnection(serverfd, nextSocket, epfd);
+				acceptConnection(serverfd, &nextSocket, epfd);
 			} 
             else if (evlist[i].data.fd == inetfd)
             {
@@ -60,6 +60,8 @@ int main(int argc, char** argv)
 			}
 		}
 	}
+
+    
 
     _exit(EXIT_SUCCESS);
 }

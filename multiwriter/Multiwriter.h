@@ -27,7 +27,7 @@ struct sockaddr_un randomAddr();
 void timeToStr();
 void epollPush(int epollfd, int socketfd, int flags);
 void makeNonBlock(int sockfd);
-void acceptConnection(int serverfd, int* socketsList, int epfd);
+void acceptConnection(int serverfd, int** socketsList, int epfd);
 void onIncomingData(int inetfd, struct Connections* connections);
 //char* my_itoa(int x);
 
