@@ -124,6 +124,7 @@ struct sockaddr_un randomAddr()
     servaddr.sun_family = AF_LOCAL;
     strncpy(&servaddr.sun_path[1], buff, size);
 
+    free(buff);
     return servaddr;
 }
 
@@ -152,24 +153,40 @@ int createClient(int port)
 
 //---------------------------------------
 
-void timeToStr()
+char* timeToStr()
 {
-    char fmt[64];//, buf[64];
+    char* buff=(char*)malloc(20);
+    if(buff == NULL)
+        onError("memory allocation");
+    buff[19] = 0;
     struct timespec t;
     struct tm* tm;
+    long nanoseconds;
+
     if(clock_gettime(CLOCK_REALTIME, &t)<0)
         onError("gettime");
-
     if((tm = localtime(&t.tv_sec)) == NULL)
         onError("localtime");
 
-    strftime(fmt, sizeof fmt, "%M*:%S,", tm);
+    strftime(buff, sizeof buff, "%M*:%S,", tm);
 
-    //TODO... concat time with nanoseconds
+    nanoseconds = t.tv_nsec;
+    char nsec[10];
+    nsec[9] = 0;
+    for (int i = 0; i < 9; ++i) {
+        nsec[8-i] = '0' + (char)(nanoseconds%10);
+        nanoseconds /= 10;
+    }
 
-    //printf("'%s'\n", fmt); 
+    strncpy(&buff[7], nsec, 2);
+    strcat(buff, ".");
+    strncpy(&buff[10], &nsec[2], 2);
+    strcat(buff, ".");
+    strncpy(&buff[13], &nsec[4], 2);
+    strcat(buff, ".");
+    strncpy(&buff[16], &nsec[6], 3);
 
-    
+    return buff;    
 }
 
 //---------------------------------------
@@ -219,6 +236,5 @@ void onIncomingData(int inetfd, struct Connections* connections)
             connections->connectedNo++;
         else
             connections->rejectedNo++;
-
     }
 }

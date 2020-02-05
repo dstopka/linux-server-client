@@ -48,6 +48,9 @@ int main(int argc, char** argv)
             {
                 if (epoll_ctl(epfd, EPOLL_CTL_DEL, evlist[i].data.fd, NULL) < 0)
                     onError("epoll_ctl delete");
+                for(int i = 0; i < args.connectionsNumber; ++i)
+                    if(connections.connectedSockets[i] == evlist[i].data.fd)
+                        connections.connectedSockets[i] = 0;
 				close(evlist[i].data.fd);
 			} 
             else if (evlist[i].data.fd == serverfd) 
@@ -60,9 +63,16 @@ int main(int argc, char** argv)
 			}
 		}
 	}
+    if (epoll_ctl(epfd, EPOLL_CTL_DEL, inetfd, NULL) < 0)
+        onError("epoll_ctl delete");
+    close(inetfd);
+    printf("%s\n", timeToStr());
 
-    
-
+    free(connections.connectedSockets);
+    if(close(serverfd) < 0)
+        onError("close");
+    if(close(epfd) < 0)
+        onError("close");
     _exit(EXIT_SUCCESS);
 }
 

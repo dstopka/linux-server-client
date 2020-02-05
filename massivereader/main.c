@@ -32,8 +32,10 @@ int main(int argc, char** argv)
 		for (int i = 0; i < readyEventsNumber; ++i) {
 			if (evlist[i].events & EPOLLERR || evlist[i].events & EPOLLHUP || !(evlist[i].events & EPOLLIN))
             {
-				perror("epoll error");
-				close(evlist[i].data.fd);
+				if (epoll_ctl(epfd, EPOLL_CTL_DEL, evlist[i].data.fd, NULL) < 0)
+                    onError("epoll_ctl delete");
+				if(close(evlist[i].data.fd) < 0)
+                    onError("close");
 			} 
             else if (evlist[i].data.fd == serverfd) 
             {
@@ -47,7 +49,9 @@ int main(int argc, char** argv)
 	}
 
     free(args.filePrefix);
-    close(serverfd);
-    close(epfd);
+    if(close(serverfd) < 0)
+        onError("close");
+    if(close(epfd) < 0)
+        onError("close");
     _exit(EXIT_SUCCESS);
 }
