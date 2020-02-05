@@ -10,6 +10,8 @@
 #include <errno.h>
 #include <sys/epoll.h>
 #include <sys/un.h>
+#include <sys/time.h>
+#include <time.h>
 #include "Multiwriter.h"
 
 void onError(char* message)
@@ -141,3 +143,39 @@ int createClient(int port)
 
     return sockfd;
 }
+
+//---------------------------------------
+
+void timeToStr()
+{
+     char            fmt[64];//, buf[64];
+    struct timespec t;
+    struct tm* tm;
+    if(clock_gettime(CLOCK_REALTIME, &t)<0)
+        onError("gettime");
+
+    if((tm = localtime(&t.tv_sec)) == NULL)
+        onError("localtime");
+
+    strftime(fmt, sizeof fmt, "%M*:%S,", tm);
+
+    //TODO... concat time with nanoseconds
+
+    printf("'%s'\n", fmt); 
+
+    
+}
+
+// char* my_itoa(int x) {
+//   char** buf = malloc(10);
+//   char *p = buf[9];
+//   *p = '\0';
+//   int i = x;
+
+//   do {
+//     *(--p) = abs(i%10) + '0';
+//     i /= 10;
+//   } while (i);
+//   printf("itoa %s", *buf);
+//   return *buf;
+// }

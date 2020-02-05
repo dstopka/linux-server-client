@@ -15,5 +15,7 @@ int createClient(int port);
 int createServer(struct sockaddr_un* addr);
 int createSocket();
 struct sockaddr_un randomAddr();
+void timeToStr();
+//char* my_itoa(int x);
 
 #endif

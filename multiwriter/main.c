@@ -19,15 +19,14 @@ int main(int argc, char** argv)
     struct Arguments args;
     getArguments(&args, &argc, &argv);
     int serverfd;
-    int clientaddr;
+    int inetfd;
     servaddr = randomAddr();
     serverfd = createServer(&servaddr);
-    clientaddr = createClient(args.port);
+    inetfd = createClient(args.port);
     if(serverfd)
     {
 
     }
-    write(clientaddr, "HEJKURWA\n", 9);
 
     while (1) {
     

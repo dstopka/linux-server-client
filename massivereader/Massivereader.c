@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/epoll.h>
+#include <sys/un.h>
 #include "Massivereader.h"
 
 
@@ -114,11 +115,18 @@ void acceptAddConnection(int sockfd, int epfd)
 
 void onIncomingData(int fd)
 {
-	ssize_t count;
-	char buf[512];
-	count = read(fd, buf, sizeof(buf) - 1);
-	buf[count] = '\0';
-	printf("%s \n", buf);
+	struct sockaddr_un addr;
+
+    while(1)
+    {
+	    if(read(fd, &addr, sizeof(struct sockaddr_un)) != sizeof(struct sockaddr_un))
+        {
+            break;
+        }
+    }
+
+
+	write(1, addr.sun_path, 108);
 }
 
 //---------------------------------------
