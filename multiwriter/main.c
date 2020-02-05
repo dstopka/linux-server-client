@@ -81,7 +81,7 @@ int main(int argc, char** argv)
     {
 
     }
-    printf("JANUSz");
+
     free(connections.connectedSockets);
     if(close(serverfd) < 0)
         onError("close");
