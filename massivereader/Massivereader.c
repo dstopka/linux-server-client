@@ -94,16 +94,13 @@ int createServer(int port)
 
 //---------------------------------------
 
-void epollPush(int epollfd, int socketfd, int flags, int local, struct sockaddr_un addr)
+void epollPush(int epollfd, int flags, struct SocketData* sockData)
 {
     struct epoll_event event;
-    struct SocketData sockdt;
-    sockdt.fd = socketfd;
-    sockdt.addr = addr;
-    sockdt.local = local;
-    event.data.ptr = &sockdt;
+    //struct SocketData sockdt;
+    event.data.ptr = sockData;
 	event.events = flags;
-	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &event) < 0)
+	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, sockData->fd, &event) < 0)
         onError("epoll_ctl");
 }
 
@@ -112,14 +109,16 @@ void epollPush(int epollfd, int socketfd, int flags, int local, struct sockaddr_
 void acceptAddConnection(int sockfd, int epfd)
 {
 	struct sockaddr newAddr;
+    struct SocketData sockData;
 	socklen_t newAddrlen = sizeof(newAddr);
 	int infd;
 	if((infd = accept(sockfd, &newAddr, &newAddrlen)) < 0)
         onError("accept");
-
+    sockData.local = 0;
+    sockData.fd = infd;
     makeNonBlock(infd);
-    struct sockaddr_un addr;
-	epollPush(epfd, infd, EPOLLIN | EPOLLET, 0, addr);    
+	epollPush(epfd, EPOLLIN | EPOLLET, &sockData);
+    printf("accepted!\n");    
 }
 
 //---------------------------------------
@@ -129,12 +128,14 @@ void onIncomingData(int fd, int epollfd)
     while(1)
     {
         struct sockaddr_un addr;
-	    if(read(fd, &addr, sizeof(struct sockaddr_un)) != sizeof(struct sockaddr_un))
+        int readB;
+	    if((readB = read(fd, &addr, sizeof(struct sockaddr_un))) != sizeof(struct sockaddr_un))
             break;
         int newSockfd;
-        if((newSockfd = connectSocket(addr)))
+        if((newSockfd = connectSocket(&addr)))
         {
-            epollPush(epollfd, newSockfd, EPOLLIN | EPOLLET, 1, addr);
+            struct SocketData sockData = {newSockfd, 1, addr};
+            epollPush(epollfd, EPOLLIN | EPOLLET, &sockData);
             if(write(fd, &addr, sizeof(struct sockaddr_un)) < 0)
                 onError("write +");
         }
@@ -161,17 +162,14 @@ void makeNonBlock(int sockfd)
 
 //---------------------------------------
 
-int connectSocket(struct sockaddr_un addr)
+int connectSocket(struct sockaddr_un* addr)
 {
     int socketfd;
     if((socketfd = socket(AF_LOCAL, SOCK_STREAM, 0)) < 0)
         onError("socket");
 
-    if(connect(socketfd, (struct sockaddr *)&addr, sizeof(struct sockaddr_un)) < 0)
-    {
-        printf("%d\n", errno);
-        return 0;
-    }
+    if(connect(socketfd, (struct sockaddr *)addr, sizeof(struct sockaddr_un)) < 0)
+        onError("connect");
 
     makeNonBlock(socketfd);
     return socketfd;
@@ -182,12 +180,12 @@ int connectSocket(struct sockaddr_un addr)
 void makeLog(struct Arguments* args, int* logfd)
 {
     int fd = -1;
-    char new_file_path[1024];
+    char filePath[256];
     
     while(fd == -1)
     {
-        sprintf(new_file_path,"%s%03d", args->filePrefix, args->filesNo++);
-        fd = open(new_file_path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+        sprintf(filePath,"%s%03d", args->filePrefix, args->filesNo++);
+        fd = open(filePath, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     }
 
     if(close(*logfd) < 0)
@@ -263,16 +261,22 @@ void readLocalData(struct SocketData* socketData, int fileFd)
     //struct timespec sub;
     char* currentTimeStr;
     currentTimeStr = timeToStr();
-    if(read(socketData->fd, &timestamp, 20) != 20)
+    write(1, "read0\n", 6);
+    int readB;
+    if((readB=read(socketData->fd, &timestamp, 20)) != 20)
+    {
+        printf("%d\t%d\n", socketData->fd, errno);
         onError("read");
-    if(read(socketData->fd, &connectionAddr, 108) != 108)
+    }
+    write(1, "read1\n", 6);
+    if(read(socketData->fd, &connectionAddr, 110) != 110)
         onError("read");
-
+    write(1, "read2\n", 6);
     if(!strcmp(connectionAddr, socketData->addr.sun_path))
         return;
     if(read(socketData->fd, &readTime, sizeof(struct timespec)) != sizeof(struct timespec))
         onError("read");
-
+    write(1, "read3\n", 6);
     if(clock_gettime(CLOCK_REALTIME, &currentTime) < 0)
         onError("clock_gettime");
 
@@ -284,5 +288,5 @@ void readLocalData(struct SocketData* socketData, int fileFd)
     write(fileFd, timestamp, 20);
     write(fileFd, ":", 1);    
     write(fileFd, "\n", 1);
-
+    write(1, "readAll\n", 8);
 }

@@ -21,12 +21,12 @@ struct SocketData
 
 void getArguments(struct Arguments* args, int argc, char** argv);
 int createServer(int port);
-void epollPush(int epollfd, int socketfd, int flags, int local, struct sockaddr_un addr);
+void epollPush(int epollfd, int flags, struct SocketData* sockData);
 void acceptAddConnection(int socket_fd, int epoll_fd);
 void onIncomingData(int fd, int epollfd);
 void makeNonBlock(int sockfd);
 void onError(char* message);
-int connectSocket(struct sockaddr_un addr);
+int connectSocket(struct sockaddr_un* addr);
 void makeLog(struct Arguments* args, int* logfd);
 void sigUsr1Handler();
 char* timeToStr();

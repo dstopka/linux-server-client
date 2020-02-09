@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 {
     struct sockaddr_un servaddr;
     struct timespec serviceTime;
-    struct timespec sleepTime;
+    //struct timespec sleepTime;
     memset(&serviceTime, 0, sizeof(struct timespec));
     struct itimerspec ts;
     struct epoll_event evlist[MAX_EVENTS];
@@ -46,14 +46,17 @@ int main(int argc, char** argv)
     epollPush(epfd, serverfd, EPOLLIN | EPOLLET);
     epollPush(epfd, inetfd, EPOLLIN | EPOLLET);
 
-    for(int i; i < args.connectionsNumber; ++i)
-        write(inetfd, &servaddr, sizeof(struct sockaddr_un));
+    for(int i = 0; i < args.connectionsNumber; ++i)
+        if(write(inetfd, &servaddr, sizeof(struct sockaddr_un)) < 0)
+            onError("write");
 
     while(connections.connectedNo + connections.rejectedNo < args.connectionsNumber) 
-    {
+    {   
+        printf("%d\t%d\n", connections.connectedNo, connections.rejectedNo);
 		int readyEventsNumber;
 		readyEventsNumber = epoll_wait(epfd, evlist, MAX_EVENTS, -1);
 		for (int i = 0; i < readyEventsNumber; ++i) {
+            printf("%d\n", i);
 			if (evlist[i].events & EPOLLERR || evlist[i].events & EPOLLHUP || !(evlist[i].events & EPOLLIN))
             {
                 if (epoll_ctl(epfd, EPOLL_CTL_DEL, evlist[i].data.fd, NULL) < 0)
@@ -64,30 +67,28 @@ int main(int argc, char** argv)
 				close(evlist[i].data.fd);
 			} 
             else if (evlist[i].data.fd == serverfd) 
-            {
 				acceptConnection(serverfd, &nextSocket, epfd);
-			} 
             else if (evlist[i].data.fd == inetfd)
-            {
 				onIncomingData(inetfd, &connections);
-			}
 		}
 	}
     if (epoll_ctl(epfd, EPOLL_CTL_DEL, inetfd, NULL) < 0)
         onError("epoll_ctl delete");
+
     close(inetfd);
     printf("%s\n", timeToStr());
 
     if(timer_settime(timerid, 0, &ts, NULL))
         onError("timer set_time");
 
-    sleepTime.tv_sec=(int)(args.interspace*1000) / 1000000000;
-    sleepTime.tv_nsec=(int)(args.interspace*1000) % 1000000000;
+    //sleepTime.tv_sec=(int)(args.interspace*1000) / 1000000000;
+    //sleepTime.tv_nsec=(int)(args.interspace*1000) % 1000000000;
 
     while(running)
     {
+        printf("sending...\n");
         sendData(args.connectionsNumber, &connections, servaddr, &serviceTime);
-        nanosleep(&sleepTime, NULL);
+        //nanosleep(&sleepTime, NULL);
     }
 
     free(connections.connectedSockets);

@@ -42,6 +42,7 @@ void getArguments(struct Arguments* args, int argc, char* argv[])
                     printf("Connections number argument must be an integer!\n");
                     _exit(EXIT_FAILURE);
                 }
+                readArgs++;
                 break;
 
             case 'p':
@@ -51,6 +52,7 @@ void getArguments(struct Arguments* args, int argc, char* argv[])
                     printf("Port argument must be an integer!\n");
                     _exit(EXIT_FAILURE);
                 }
+                readArgs++;
                 break;
 
             case 'd':
@@ -60,6 +62,7 @@ void getArguments(struct Arguments* args, int argc, char* argv[])
                     printf("Interspace argument must be a float!\n");
                     _exit(EXIT_FAILURE);
                 }
+                readArgs++;
                 break;
 
             case 'T':
@@ -69,6 +72,7 @@ void getArguments(struct Arguments* args, int argc, char* argv[])
                     printf("Runtime argument must be a float!\n");
                     _exit(EXIT_FAILURE);
                 }
+                readArgs++;
                 break;
 
 			default: 
@@ -254,10 +258,7 @@ timer_t createTimer()
 	sev.sigev_signo = SIGUSR1;
 
 	if(timer_create(CLOCK_REALTIME, &sev, &id) < 0)
-	{
-		perror("timer_create");
-		_exit(EXIT_FAILURE);
-	}
+        onError("timer_create");
     return id;
 }
 
@@ -287,10 +288,9 @@ struct itimerspec setTime(float time)
     struct itimerspec ts;
     t = time * 10000000;
     ts.it_value.tv_sec = (int)(t / 1000000000);
-    ts.it_value.tv_nsec = (int)time % 1000000000;
+    ts.it_value.tv_nsec = (long)t%1000000000;
     ts.it_interval.tv_nsec = 0;
     ts.it_interval.tv_sec = 0;
-
     return ts;
 }
 
@@ -318,7 +318,7 @@ void sendData(int max, struct Connections* connected, struct sockaddr_un addr, s
     randIdx = rand()%max;
     while(connected->connectedSockets[randIdx] == 0)
         randIdx = rand()%max;
-
+    printf("socket: %d\n", connected->connectedSockets[randIdx]);
     write(connected->connectedSockets[randIdx], strStartTime, 20);
     write(connected->connectedSockets[randIdx], &addr, sizeof(struct sockaddr_un));
     write(connected->connectedSockets[randIdx], &startTime, sizeof(startTime));    
