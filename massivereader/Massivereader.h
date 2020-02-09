@@ -30,6 +30,7 @@ int connectSocket(struct sockaddr_un* addr);
 void makeLog(struct Arguments* args, int* logfd);
 void sigUsr1Handler();
 char* timeToStr();
+void setHandler();
 void readLocalData(struct SocketData* socketData, int fileFd);
 
 #endif

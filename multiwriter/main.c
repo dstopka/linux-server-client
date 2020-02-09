@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 {
     struct sockaddr_un servaddr;
     struct timespec serviceTime;
-    //struct timespec sleepTime;
+    struct timespec sleepTime;
     memset(&serviceTime, 0, sizeof(struct timespec));
     struct itimerspec ts;
     struct epoll_event evlist[MAX_EVENTS];
@@ -52,11 +52,9 @@ int main(int argc, char** argv)
 
     while(connections.connectedNo + connections.rejectedNo < args.connectionsNumber) 
     {   
-        printf("%d\t%d\n", connections.connectedNo, connections.rejectedNo);
 		int readyEventsNumber;
 		readyEventsNumber = epoll_wait(epfd, evlist, MAX_EVENTS, -1);
 		for (int i = 0; i < readyEventsNumber; ++i) {
-            printf("%d\n", i);
 			if (evlist[i].events & EPOLLERR || evlist[i].events & EPOLLHUP || !(evlist[i].events & EPOLLIN))
             {
                 if (epoll_ctl(epfd, EPOLL_CTL_DEL, evlist[i].data.fd, NULL) < 0)
@@ -76,19 +74,17 @@ int main(int argc, char** argv)
         onError("epoll_ctl delete");
 
     close(inetfd);
-    printf("%s\n", timeToStr());
 
     if(timer_settime(timerid, 0, &ts, NULL))
         onError("timer set_time");
 
-    //sleepTime.tv_sec=(int)(args.interspace*1000) / 1000000000;
-    //sleepTime.tv_nsec=(int)(args.interspace*1000) % 1000000000;
+    sleepTime.tv_sec=(int)(args.interspace*1000) / 1000000000;
+    sleepTime.tv_nsec=(int)(args.interspace*1000) % 1000000000;
 
     while(running)
     {
-        printf("sending...\n");
         sendData(args.connectionsNumber, &connections, servaddr, &serviceTime);
-        //nanosleep(&sleepTime, NULL);
+        nanosleep(&sleepTime, NULL);
     }
 
     free(connections.connectedSockets);
@@ -96,7 +92,7 @@ int main(int argc, char** argv)
         onError("close");
     if(close(epfd) < 0)
         onError("close");
-    printf("service time: %lds & %ldns", serviceTime.tv_sec, serviceTime.tv_nsec);
+    printf("service time: %lds & %ldns\n", serviceTime.tv_sec, serviceTime.tv_nsec);
     _exit(EXIT_SUCCESS);
 }
 

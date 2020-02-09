@@ -14,6 +14,7 @@
 #include <time.h>
 #include <signal.h>
 #include <limits.h>
+#include <sys/random.h>
 #include "Multiwriter.h"
 
 int running = 1;
@@ -309,20 +310,26 @@ void sendData(int max, struct Connections* connected, struct sockaddr_un addr, s
     struct timespec startTime;
     struct timespec endTime;
     char* strStartTime;
+    char random;
     int randIdx;
-
-    srand(time(NULL));
     if(clock_gettime(CLOCK_REALTIME,&startTime))
         onError("clock_gettime");
     strStartTime = timeToStr();
-    randIdx = rand()%max;
+    if(getrandom(&random, 1, 0) < 0)
+        onError("getrandom");
+    randIdx = random < 0 ? -random % max : random % max;
     while(connected->connectedSockets[randIdx] == 0)
-        randIdx = rand()%max;
-    printf("socket: %d\n", connected->connectedSockets[randIdx]);
-    write(connected->connectedSockets[randIdx], strStartTime, 20);
-    write(connected->connectedSockets[randIdx], &addr, sizeof(struct sockaddr_un));
-    write(connected->connectedSockets[randIdx], &startTime, sizeof(startTime));    
-
+    {
+        if(getrandom(&random, 1, 0) < 0)
+            onError("getrandom");
+        randIdx = random < 0 ? -random % max : random % max;
+    }
+    if(write(connected->connectedSockets[randIdx], strStartTime, 20) < 0)
+        onError("write");
+    if(write(connected->connectedSockets[randIdx], &addr, sizeof(struct sockaddr_un)) < 0)
+        onError("write");
+    if(write(connected->connectedSockets[randIdx], &startTime, sizeof(startTime)) < 0)
+        onError("write"); 
     if(clock_gettime(CLOCK_REALTIME,&endTime))
         onError("clock_gettime");
     sumServiceTime(startTime, endTime, serviceTime);

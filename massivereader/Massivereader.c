@@ -97,7 +97,6 @@ int createServer(int port)
 void epollPush(int epollfd, int flags, struct SocketData* sockData)
 {
     struct epoll_event event;
-    //struct SocketData sockdt;
     event.data.ptr = sockData;
 	event.events = flags;
 	if (epoll_ctl(epollfd, EPOLL_CTL_ADD, sockData->fd, &event) < 0)
@@ -117,8 +116,7 @@ void acceptAddConnection(int sockfd, int epfd)
     sockData.local = 0;
     sockData.fd = infd;
     makeNonBlock(infd);
-	epollPush(epfd, EPOLLIN | EPOLLET, &sockData);
-    printf("accepted!\n");    
+	epollPush(epfd, EPOLLIN | EPOLLET, &sockData);  
 }
 
 //---------------------------------------
@@ -134,8 +132,13 @@ void onIncomingData(int fd, int epollfd)
         int newSockfd;
         if((newSockfd = connectSocket(&addr)))
         {
-            struct SocketData sockData = {newSockfd, 1, addr};
-            epollPush(epollfd, EPOLLIN | EPOLLET, &sockData);
+            struct SocketData* sockData = (struct SocketData*)malloc(sizeof(struct SocketData));
+            if(sockData == NULL)
+                onError("memory allocation");
+            sockData->fd = newSockfd;
+            sockData->addr = addr;
+            sockData->local = 1;
+            epollPush(epollfd, EPOLLIN | EPOLLET, sockData);
             if(write(fd, &addr, sizeof(struct sockaddr_un)) < 0)
                 onError("write +");
         }
@@ -261,22 +264,18 @@ void readLocalData(struct SocketData* socketData, int fileFd)
     //struct timespec sub;
     char* currentTimeStr;
     currentTimeStr = timeToStr();
-    write(1, "read0\n", 6);
-    int readB;
-    if((readB=read(socketData->fd, &timestamp, 20)) != 20)
-    {
-        printf("%d\t%d\n", socketData->fd, errno);
+
+    if(read(socketData->fd, &timestamp, 20) != 20)
         onError("read");
-    }
-    write(1, "read1\n", 6);
+
     if(read(socketData->fd, &connectionAddr, 110) != 110)
         onError("read");
-    write(1, "read2\n", 6);
+
     if(!strcmp(connectionAddr, socketData->addr.sun_path))
         return;
     if(read(socketData->fd, &readTime, sizeof(struct timespec)) != sizeof(struct timespec))
         onError("read");
-    write(1, "read3\n", 6);
+
     if(clock_gettime(CLOCK_REALTIME, &currentTime) < 0)
         onError("clock_gettime");
 
@@ -288,5 +287,4 @@ void readLocalData(struct SocketData* socketData, int fileFd)
     write(fileFd, timestamp, 20);
     write(fileFd, ":", 1);    
     write(fileFd, "\n", 1);
-    write(1, "readAll\n", 8);
 }

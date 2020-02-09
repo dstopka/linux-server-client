@@ -28,6 +28,7 @@ int main(int argc, char** argv)
     sockData.fd = serverfd;
     sockData.local = 0;
     epollPush(epfd, EPOLLIN | EPOLLET, &sockData);
+    setHandler();
 
     while(1) 
     {
@@ -35,21 +36,27 @@ int main(int argc, char** argv)
 		readyEventsNumber = epoll_wait(epfd, evlist, MAX_EVENTS, -1);
 		for (int i = 0; i < readyEventsNumber; ++i) 
         {
-            printf("%d\n", readyEventsNumber);
 			if (evlist[i].events & EPOLLERR || evlist[i].events & EPOLLHUP || !(evlist[i].events & EPOLLIN))
             {
-				if (epoll_ctl(epfd, EPOLL_CTL_DEL, evlist[i].data.fd, NULL) < 0)
+				if (epoll_ctl(epfd, EPOLL_CTL_DEL, ((struct SocketData*) (evlist[i].data.ptr))->fd, NULL) < 0)
                     onError("epoll_ctl delete");
-				if(close(evlist[i].data.fd) < 0)
+				if(close(((struct SocketData*) (evlist[i].data.ptr))->fd) < 0)
                     onError("close");
 			} 
             else if (((struct SocketData*) (evlist[i].data.ptr))->fd == serverfd) 
 				acceptAddConnection(serverfd, epfd);
-            else if(((struct SocketData*) (evlist[i].data.ptr))->local)
+            else if(((struct SocketData*) (evlist[i].data.ptr))->local == 1)
+            {
 				readLocalData(((struct SocketData*) (evlist[i].data.ptr)), logfd);
-            else
+            }
+            else if(((struct SocketData*) (evlist[i].data.ptr))->local == 0)
                 onIncomingData(((struct SocketData*) (evlist[i].data.ptr))->fd, epfd);
 		}
+        if(flag)
+        {
+            makeLog(&args, &logfd);
+            flag = 0;
+        }
 	}
 
     free(args.filePrefix);
