@@ -29,7 +29,7 @@ int createClient(int port);
 int createServer(struct sockaddr_un* addr);
 int createSocket();
 struct sockaddr_un randomAddr();
-char* timeToStr();
+char* timeToStr(struct timespec time);
 void epollPush(int epollfd, int socketfd, int flags);
 void makeNonBlock(int sockfd);
 void acceptConnection(int serverfd, int** socketsList, int epfd);

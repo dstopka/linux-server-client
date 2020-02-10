@@ -46,10 +46,8 @@ int main(int argc, char** argv)
             else if (((struct SocketData*) (evlist[i].data.ptr))->fd == serverfd) 
 				acceptAddConnection(serverfd, epfd);
             else if(((struct SocketData*) (evlist[i].data.ptr))->local == 1)
-            {
 				readLocalData(((struct SocketData*) (evlist[i].data.ptr)), logfd);
-            }
-            else if(((struct SocketData*) (evlist[i].data.ptr))->local == 0)
+            else
                 onIncomingData(((struct SocketData*) (evlist[i].data.ptr))->fd, epfd);
 		}
         if(flag)

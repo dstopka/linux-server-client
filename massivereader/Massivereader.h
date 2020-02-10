@@ -29,8 +29,9 @@ void onError(char* message);
 int connectSocket(struct sockaddr_un* addr);
 void makeLog(struct Arguments* args, int* logfd);
 void sigUsr1Handler();
-char* timeToStr();
+char* timeToStr(struct timespec time);
 void setHandler();
 void readLocalData(struct SocketData* socketData, int fileFd);
+char* timeDifference(struct timespec timeStart, struct timespec timeEnd);
 
 #endif

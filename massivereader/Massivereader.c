@@ -183,18 +183,22 @@ int connectSocket(struct sockaddr_un* addr)
 void makeLog(struct Arguments* args, int* logfd)
 {
     int fd = -1;
-    char filePath[256];
+    char* file = (char *)malloc(strlen(args->filePrefix) + 4);
+    if(file == NULL)
+        onError("memory allocation");
+
     
     while(fd == -1)
     {
-        sprintf(filePath,"%s%03d", args->filePrefix, args->filesNo++);
-        fd = open(filePath, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+        sprintf(file,"%s%03d", args->filePrefix, args->filesNo++);
+        fd = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0666);
     }
 
     if(close(*logfd) < 0)
         onError("close");
     *logfd = fd;
     flag = 0;
+    free(file);
 }
 
 //---------------------------------------
@@ -217,31 +221,75 @@ void setHandler()
 
 //---------------------------------------
 
-char* timeToStr()
+char* timeToStr(struct timespec time)
 {
+    //struct tm* tm;
     char* buff=(char*)malloc(20);
     if(buff == NULL)
         onError("memory allocation");
     buff[19] = 0;
-    struct timespec t;
-    struct tm* tm;
+    int minutes;
+    int seconds;
     long nanoseconds;
 
-    if(clock_gettime(CLOCK_REALTIME, &t)<0)
-        onError("gettime");
-    if((tm = localtime(&t.tv_sec)) == NULL)
-        onError("localtime");
+    // Thread safe but not signal safe
+    // if((tm = localtime(&time.tv_sec)) == NULL)
+    //     onError("localtime");
 
-    strftime(buff, sizeof buff, "%M*:%S,", tm);
+    // strftime(buff, sizeof buff, "%M*:%S,", tm);
 
-    nanoseconds = t.tv_nsec;
+    seconds = time.tv_sec;
+    minutes = seconds / 60;
+    seconds = seconds % 60;
+
+    char mins[3];
+    mins[2] = 0;
+    if(minutes < 10)
+    {
+        mins[0] = '0';
+        mins[1] = '0' + (char)(minutes%10);
+    }
+    else 
+    {
+        for(int i = 0; i < 2; ++i)
+        {
+            mins[1-i] = '0' + (char)(minutes%10);
+            minutes /= 10;
+        }    
+    }
+
+    strncpy(buff, mins, 2);
+
+    strcat(buff, "*:");
+
+    char secs[3];
+    secs[2] = 0;
+    if(seconds < 10)
+    {
+        secs[0] = '0';
+        secs[1] = '0' + (char)(seconds%10);
+    }
+    else 
+    {
+        for(int i = 0; i < 2; ++i)
+        {
+            secs[1-i] = '0' + (char)(seconds%10);
+            seconds /= 10;
+        }    
+    }
+
+    strncpy(&buff[4], secs, 2);
+
+    nanoseconds = time.tv_nsec;
     char nsec[10];
     nsec[9] = 0;
-    for (int i = 0; i < 9; ++i) {
+    for (int i = 0; i < 9; ++i) 
+    {
         nsec[8-i] = '0' + (char)(nanoseconds%10);
         nanoseconds /= 10;
     }
 
+    strcat(buff, ",");
     strncpy(&buff[7], nsec, 2);
     strcat(buff, ".");
     strncpy(&buff[10], &nsec[2], 2);
@@ -261,30 +309,57 @@ void readLocalData(struct SocketData* socketData, int fileFd)
     char connectionAddr[108];
     struct timespec readTime;
     struct timespec currentTime;
-    //struct timespec sub;
+    char* subTime;
     char* currentTimeStr;
-    currentTimeStr = timeToStr();
 
     if(read(socketData->fd, &timestamp, 20) != 20)
         onError("read");
 
-    if(read(socketData->fd, &connectionAddr, 110) != 110)
+    if(read(socketData->fd, &connectionAddr, 108) != 108)
         onError("read");
 
-    if(!strcmp(connectionAddr, socketData->addr.sun_path))
-        return;
     if(read(socketData->fd, &readTime, sizeof(struct timespec)) != sizeof(struct timespec))
         onError("read");
+
+    if(strcmp(connectionAddr, socketData->addr.sun_path))
+        return;
 
     if(clock_gettime(CLOCK_REALTIME, &currentTime) < 0)
         onError("clock_gettime");
 
-    //long time = (readTime.tv_sec * 1000000000 + readTime.tv_nsec) - (currentTime.tv_sec * 1000000000 + readTime.tv_sec);
-    //sub.tv_nsec = time % 1000000000;
-    //sub.tv_sec = time / 1000000000;
-    write(fileFd, currentTimeStr, 20);
-    write(fileFd, ":", 1);
-    write(fileFd, timestamp, 20);
-    write(fileFd, ":", 1);    
-    write(fileFd, "\n", 1);
+    currentTimeStr = timeToStr(currentTime);
+    if(write(fileFd, currentTimeStr, 20) < 20)
+        onError("write");
+    free(currentTimeStr);
+    if(write(fileFd, ":", 1) < 1)
+        onError("write");
+    if(write(fileFd, timestamp, 20) < 20)
+        onError("write");
+    if(write(fileFd, ":", 1) < 1)
+        onError("write");
+    subTime = timeDifference(readTime, currentTime);
+    if(write(fileFd, subTime, 20) < 20)
+        onError("write");
+    free(subTime);   
+    if(write(fileFd, "\n", 1) < 1)
+        onError("write");
+
+}
+
+//---------------------------------------
+
+char* timeDifference(struct timespec timeStart, struct timespec timeEnd)
+{
+    struct timespec time;
+    long start;
+    long end;
+    int subTime;
+    char* timeStr;
+    start = timeStart.tv_sec * 1000000000 + timeStart.tv_nsec;
+    end = timeEnd.tv_sec * 1000000000 + timeEnd.tv_nsec;
+    subTime = end - start;
+    time.tv_sec = subTime / 1000000000;
+    time.tv_nsec = subTime % 1000000000;
+    timeStr = timeToStr(time);
+    return timeStr;
 }

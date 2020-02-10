@@ -163,31 +163,75 @@ int createClient(int port)
 
 //---------------------------------------
 
-char* timeToStr()
+char* timeToStr(struct timespec time)
 {
+    //struct tm* tm;
     char* buff=(char*)malloc(20);
     if(buff == NULL)
         onError("memory allocation");
     buff[19] = 0;
-    struct timespec t;
-    struct tm* tm;
+    int minutes;
+    int seconds;
     long nanoseconds;
 
-    if(clock_gettime(CLOCK_REALTIME, &t)<0)
-        onError("gettime");
-    if((tm = localtime(&t.tv_sec)) == NULL)
-        onError("localtime");
+    // Thread safe but not signal safe
+    // if((tm = localtime(&time.tv_sec)) == NULL)
+    //     onError("localtime");
 
-    strftime(buff, sizeof buff, "%M*:%S,", tm);
+    // strftime(buff, sizeof buff, "%M*:%S,", tm);
 
-    nanoseconds = t.tv_nsec;
+    seconds = time.tv_sec;
+    minutes = seconds / 60;
+    seconds = seconds % 60;
+
+    char mins[3];
+    mins[2] = 0;
+    if(minutes < 10)
+    {
+        mins[0] = '0';
+        mins[1] = '0' + (char)(minutes%10);
+    }
+    else 
+    {
+        for(int i = 0; i < 2; ++i)
+        {
+            mins[1-i] = '0' + (char)(minutes%10);
+            minutes /= 10;
+        }    
+    }
+
+    strncpy(buff, mins, 2);
+
+    strcat(buff, "*:");
+
+    char secs[3];
+    secs[2] = 0;
+    if(seconds < 10)
+    {
+        secs[0] = '0';
+        secs[1] = '0' + (char)(seconds%10);
+    }
+    else 
+    {
+        for(int i = 0; i < 2; ++i)
+        {
+            secs[1-i] = '0' + (char)(seconds%10);
+            seconds /= 10;
+        }    
+    }
+
+    strncpy(&buff[4], secs, 2);
+
+    nanoseconds = time.tv_nsec;
     char nsec[10];
     nsec[9] = 0;
-    for (int i = 0; i < 9; ++i) {
+    for (int i = 0; i < 9; ++i) 
+    {
         nsec[8-i] = '0' + (char)(nanoseconds%10);
         nanoseconds /= 10;
     }
 
+    strcat(buff, ",");
     strncpy(&buff[7], nsec, 2);
     strcat(buff, ".");
     strncpy(&buff[10], &nsec[2], 2);
@@ -300,7 +344,8 @@ struct itimerspec setTime(float time)
 void sumServiceTime(struct timespec start, struct timespec end, struct timespec* sum)
 {
     sum->tv_sec += end.tv_sec - start.tv_sec + ((sum->tv_nsec + end.tv_nsec - start.tv_nsec)/1000000000);
-    sum->tv_nsec = (sum->tv_nsec+end.tv_nsec - start.tv_nsec)%1000000000;
+    long nsec = (sum->tv_nsec + end.tv_nsec - start.tv_nsec)%1000000000;
+    sum->tv_nsec = nsec < 0 ? -nsec : nsec;
 }
 
 //---------------------------------------
@@ -314,7 +359,7 @@ void sendData(int max, struct Connections* connected, struct sockaddr_un addr, s
     int randIdx;
     if(clock_gettime(CLOCK_REALTIME,&startTime))
         onError("clock_gettime");
-    strStartTime = timeToStr();
+    strStartTime = timeToStr(startTime);
     if(getrandom(&random, 1, 0) < 0)
         onError("getrandom");
     randIdx = random < 0 ? -random % max : random % max;
@@ -324,13 +369,14 @@ void sendData(int max, struct Connections* connected, struct sockaddr_un addr, s
             onError("getrandom");
         randIdx = random < 0 ? -random % max : random % max;
     }
-    if(write(connected->connectedSockets[randIdx], strStartTime, 20) < 0)
+    if(write(connected->connectedSockets[randIdx], strStartTime, 20) < 20)
         onError("write");
-    if(write(connected->connectedSockets[randIdx], &addr, sizeof(struct sockaddr_un)) < 0)
+    if(write(connected->connectedSockets[randIdx], &addr.sun_path, 108) < 108)
         onError("write");
-    if(write(connected->connectedSockets[randIdx], &startTime, sizeof(startTime)) < 0)
+    if(write(connected->connectedSockets[randIdx], &startTime, sizeof(startTime)) < sizeof(startTime))
         onError("write"); 
     if(clock_gettime(CLOCK_REALTIME,&endTime))
         onError("clock_gettime");
     sumServiceTime(startTime, endTime, serviceTime);
+    free(strStartTime);
 }
