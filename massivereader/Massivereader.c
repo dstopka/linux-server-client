@@ -19,7 +19,7 @@ int flag = 0;
 
 void onError(char* message)
 {
-    printf("%s error\n", message);
+    printf("%s error\t%d\n", message, errno);
     _exit(EXIT_FAILURE);
 }
 
@@ -174,7 +174,7 @@ int connectSocket(struct sockaddr_un* addr)
     if(connect(socketfd, (struct sockaddr *)addr, sizeof(struct sockaddr_un)) < 0)
         onError("connect");
 
-    makeNonBlock(socketfd);
+    //makeNonBlock(socketfd);
     return socketfd;
 }
 
@@ -239,7 +239,7 @@ char* timeToStr(struct timespec time)
     // strftime(buff, sizeof buff, "%M*:%S,", tm);
 
     seconds = time.tv_sec;
-    minutes = seconds / 60;
+    minutes = (seconds % 3600) / 60;
     seconds = seconds % 60;
 
     char mins[3];
@@ -313,13 +313,13 @@ void readLocalData(struct SocketData* socketData, int fileFd)
     char* currentTimeStr;
 
     if(read(socketData->fd, &timestamp, 20) != 20)
-        onError("read");
+        onError("read1");
 
     if(read(socketData->fd, &connectionAddr, 108) != 108)
-        onError("read");
+        onError("read2");
 
     if(read(socketData->fd, &readTime, sizeof(struct timespec)) != sizeof(struct timespec))
-        onError("read");
+        onError("read3");
 
     if(strcmp(connectionAddr, socketData->addr.sun_path))
         return;

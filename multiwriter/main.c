@@ -80,7 +80,6 @@ int main(int argc, char** argv)
 
     sleepTime.tv_sec=(int)(args.interspace*1000) / 1000000000;
     sleepTime.tv_nsec=(int)(args.interspace*1000) % 1000000000;
-
     while(running)
     {
         sendData(args.connectionsNumber, &connections, servaddr, &serviceTime);

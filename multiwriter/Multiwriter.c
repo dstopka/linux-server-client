@@ -181,7 +181,7 @@ char* timeToStr(struct timespec time)
     // strftime(buff, sizeof buff, "%M*:%S,", tm);
 
     seconds = time.tv_sec;
-    minutes = seconds / 60;
+    minutes = (seconds % 3600) / 60;
     seconds = seconds % 60;
 
     char mins[3];
@@ -375,7 +375,7 @@ void sendData(int max, struct Connections* connected, struct sockaddr_un addr, s
         onError("write");
     if(write(connected->connectedSockets[randIdx], &startTime, sizeof(startTime)) < sizeof(startTime))
         onError("write"); 
-    if(clock_gettime(CLOCK_REALTIME,&endTime))
+    if(clock_gettime(CLOCK_REALTIME, &endTime))
         onError("clock_gettime");
     sumServiceTime(startTime, endTime, serviceTime);
     free(strStartTime);
